@@ -8,7 +8,9 @@
 <body>
 <h1>WebSocket Client</h1>
 <div>
-    <!-- user UUID -->
+    <input type="text" id="chatIdInput" placeholder="Enter chat ID">
+</div>
+<div>
     <input type="text" id="userIdInput" placeholder="Enter your user ID (UUID)">
     <button onclick="connect()">Connect</button>
 </div>
@@ -37,12 +39,17 @@
 
         ws.onmessage = function(event) {
             let messageDisplay = document.getElementById("messages");
-            messageDisplay.innerHTML += `<p>${event.data}</p>`;
+
+            // message = {"chatId": "...", "userName": "...", "message": "...", "timestamp": ...}
+            let data = JSON.parse(event.data);
+            let messageTime = new Date(data.timestamp);
+            let messageElement = document.createElement("div");
+            messageElement.textContent = `[${messageTime.toLocaleTimeString()}] ${data.userName}: ${data.message}`;
+            messageDisplay.appendChild(messageElement);
         };
 
         ws.onclose = function() {
-            console.log("WebSocket connection closed, retrying...");
-            setTimeout(connect, 1000); // Reconnect after 1 second
+            console.log("WebSocket connection closed");
             document.getElementById("btnMessage").disabled = true;
         };
 
@@ -54,12 +61,27 @@
 
     function sendMessage() {
         let input = document.getElementById("messageInput");
-        let message = input.value;
-        ws.send(message);
-        input.value = "";
-    }
+        let chatId = document.getElementById("chatIdInput").value;
+        if (!chatId) {
+            alert("Please enter a chat ID");
+            return;
+        }
 
-    connect();
+        let payload = {
+            "timestamp": Date.now(),
+            "chatId": chatId,
+            "message": input.value,
+        };
+        input.value = "";
+
+        ws.send(JSON.stringify(payload));
+
+        let messageDisplay = document.getElementById("messages");
+        let messageElement = document.createElement("div");
+        let messageTime = new Date(payload.timestamp);
+        messageElement.textContent = `[${messageTime.toLocaleDateString()}] Me: ${payload.message}`;
+        messageDisplay.appendChild(messageElement);
+    }
 </script>
 </body>
 </html>

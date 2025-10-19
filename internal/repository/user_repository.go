@@ -10,10 +10,11 @@ import (
 )
 
 type UserRepository interface {
+	Index(ctx context.Context, filter entity.UserIndexFilter) ([]entity.User, error)
 	Get(ctx context.Context, userId string) (entity.User, error)
 	Create(ctx context.Context, user entity.User) (string, error)
 	Update(ctx context.Context, user entity.User) error
-	GetOnlineUser(ctx context.Context) ([]entity.User, error)
+	GetOnlineUser(ctx context.Context, userIds []string) ([]entity.User, error)
 }
 
 type userRepository struct {
@@ -24,6 +25,28 @@ func NewUserRepository(db mongo.Database) UserRepository {
 	return &userRepository{
 		db: db,
 	}
+}
+
+func (r *userRepository) Index(ctx context.Context, filter entity.UserIndexFilter) ([]entity.User, error) {
+	collection := r.db.Collection("users")
+
+	var bsonFilter bson.M
+	if len(filter.Ids) > 0 {
+		bsonFilter = bson.M{"_id": bson.M{"$in": filter.Ids}}
+	}
+
+	cursor, err := collection.Find(ctx, bsonFilter)
+	if err != nil {
+		return nil, err
+	}
+
+	var users []entity.User
+	err = cursor.All(ctx, &users)
+	if err != nil {
+		return nil, err
+	}
+
+	return users, nil
 }
 
 func (r *userRepository) Get(ctx context.Context, userId string) (entity.User, error) {
@@ -65,9 +88,14 @@ func (r *userRepository) Update(ctx context.Context, user entity.User) error {
 	return err
 }
 
-func (r *userRepository) GetOnlineUser(ctx context.Context) ([]entity.User, error) {
+func (r *userRepository) GetOnlineUser(ctx context.Context, userIds []string) ([]entity.User, error) {
 	collection := r.db.Collection("users")
+
 	filter := bson.M{"isOnline": true}
+	if len(userIds) > 0 {
+		filter["_id"] = bson.M{"$in": userIds}
+	}
+
 	cursor, err := collection.Find(context.Background(), filter)
 	if err != nil {
 		return nil, err

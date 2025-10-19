@@ -10,7 +10,7 @@ type UserUsecase interface {
 	Get(ctx context.Context, userId string) (entity.User, error)
 	Create(ctx context.Context, name string) (string, error)
 	Update(ctx context.Context, user entity.User) error
-	GetOnlineUser(ctx context.Context) ([]entity.User, error)
+	GetOnlineUser(ctx context.Context, userIds []string) ([]entity.User, error)
 	HandleUnregisterClient(ctx context.Context, userId string) (string, error)
 }
 
@@ -46,8 +46,8 @@ func (u *userUsecase) Update(ctx context.Context, user entity.User) error {
 	return u.userRepo.Update(ctx, user)
 }
 
-func (u *userUsecase) GetOnlineUser(ctx context.Context) ([]entity.User, error) {
-	return u.userRepo.GetOnlineUser(ctx)
+func (u *userUsecase) GetOnlineUser(ctx context.Context, userIds []string) ([]entity.User, error) {
+	return u.userRepo.GetOnlineUser(ctx, userIds)
 }
 
 func (u *userUsecase) HandleUnregisterClient(ctx context.Context, userId string) (string, error) {

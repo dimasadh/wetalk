@@ -6,9 +6,12 @@ import (
 	"net/http"
 	"wetalk/infrastructure/db"
 	"wetalk/infrastructure/ws"
+	httpHandler "wetalk/internal/delivery/http"
 	"wetalk/internal/delivery/websocket"
 	"wetalk/internal/repository"
 	"wetalk/internal/usecase"
+
+	"github.com/go-chi/chi/v5"
 )
 
 func Run() {
@@ -22,11 +25,16 @@ func Run() {
 	log.Println("Connected to MongoDB")
 
 	userRepo := repository.NewUserRepository(*mongoDb.DB)
+	chatRepo := repository.NewChatRepository(*mongoDb.DB)
+
 	userUc := usecase.NewUserUseCase(userRepo)
 	messageUc := usecase.NewMessageUseCase(userRepo)
+	chatUc := usecase.NewChatUsecase(chatRepo, userRepo)
+
+	httpH := httpHandler.NewHttpHandler(chatUc)
 
 	hub := ws.NewHub()
-	websocketHandler := websocket.NewHandler(hub, userUc, messageUc)
+	websocketH := websocket.NewWebsocketHandler(hub, userUc, messageUc, chatUc)
 	hub.OnClientUnregister = func(client *ws.UserClient) error {
 		ctx := context.Background()
 
@@ -34,11 +42,14 @@ func Run() {
 		return err
 	}
 
+	log.Println("Websocket is running")
 	go hub.Run()
 
-	log.Println("Websocket is running")
+	router := chi.NewRouter()
+	httpHandler.MapHttpRoutes(router, *httpH, *websocketH)
 
-	http.HandleFunc("/ws/", websocketHandler.HandleWebSocket)
-
-	http.ListenAndServe(":8080", nil)
+	log.Println("HTTP server is running on :8080")
+	if err := http.ListenAndServe(":8080", router); err != nil {
+		log.Fatal(err)
+	}
 }

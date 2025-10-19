@@ -5,3 +5,7 @@ type User struct {
 	Name     string `bson:"name" json:"name"`
 	IsOnline bool   `bson:"isOnline" json:"isOnline"`
 }
+
+type UserIndexFilter struct {
+	Ids []string `bson:"ids"`
+}
