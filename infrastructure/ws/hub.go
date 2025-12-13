@@ -14,7 +14,7 @@ type Hub struct {
 	OnClientUnregister func(client *UserClient) error
 }
 
-func NewHub() *Hub {
+func NewHub() IHub {
 	return &Hub{
 		clients:    make(map[string]*UserClient),
 		broadcast:  make(chan []byte, 256),
@@ -84,4 +84,16 @@ func (h *Hub) GetClientCount() int {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	return len(h.clients)
+}
+
+func (h *Hub) RegisterClient(client *UserClient) {
+    h.Register <- client
+}
+
+func (h *Hub) UnregisterClient(client *UserClient) {
+    h.Unregister <- client
+}
+
+func (h *Hub) SetOnClientUnregister(callback func(client *UserClient) error) {
+    h.OnClientUnregister = callback
 }

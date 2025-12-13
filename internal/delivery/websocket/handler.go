@@ -24,13 +24,13 @@ var upgrader = websocket.Upgrader{
 }
 
 type WebsocketHandler struct {
-	hub       *ws.Hub
+	hub       ws.IHub
 	userUc    usecase.UserUsecase
 	messageUc usecase.MessageUsecase
 	chatUc    usecase.ChatUsecase
 }
 
-func NewWebsocketHandler(hub *ws.Hub, userUc usecase.UserUsecase, messageUc usecase.MessageUsecase, chatUc usecase.ChatUsecase) *WebsocketHandler {
+func NewWebsocketHandler(hub ws.IHub, userUc usecase.UserUsecase, messageUc usecase.MessageUsecase, chatUc usecase.ChatUsecase) *WebsocketHandler {
 	return &WebsocketHandler{
 		hub:       hub,
 		userUc:    userUc,
@@ -68,7 +68,7 @@ func (h *WebsocketHandler) HandleWebSocket(w http.ResponseWriter, r *http.Reques
 	}
 
 	client := ws.NewClient(user.Id, h.hub, conn)
-	h.hub.Register <- client
+	h.hub.RegisterClient(client)
 
 	go client.WritePump()
 	client.ReadPump(func(data []byte) {

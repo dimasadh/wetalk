@@ -16,12 +16,12 @@ const (
 
 type UserClient struct {
 	UserId string
-	hub    *Hub
+	hub    IHub
 	conn   *websocket.Conn
 	send   chan []byte
 }
 
-func NewClient(userId string, hub *Hub, conn *websocket.Conn) *UserClient {
+func NewClient(userId string, hub IHub, conn *websocket.Conn) *UserClient {
 	return &UserClient{
 		UserId: userId,
 		hub:    hub,
@@ -32,7 +32,7 @@ func NewClient(userId string, hub *Hub, conn *websocket.Conn) *UserClient {
 
 func (c *UserClient) ReadPump(handler func([]byte)) {
 	defer func() {
-		c.hub.Unregister <- c
+		c.hub.UnregisterClient(c)
 		c.conn.Close()
 	}()
 
