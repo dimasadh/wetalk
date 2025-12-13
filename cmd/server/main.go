@@ -26,12 +26,13 @@ func Run() {
 
 	userRepo := repository.NewUserRepository(*mongoDb.DB)
 	chatRepo := repository.NewChatRepository(*mongoDb.DB)
+	messageRepo := repository.NewMessageRepository(*mongoDb.DB)
 
 	userUc := usecase.NewUserUseCase(userRepo)
-	messageUc := usecase.NewMessageUseCase(userRepo)
-	chatUc := usecase.NewChatUsecase(chatRepo, userRepo)
+	messageUc := usecase.NewMessageUseCase(messageRepo, chatRepo, userRepo)
+	chatUc := usecase.NewChatUsecase(chatRepo, userRepo, messageRepo)
 
-	httpH := httpHandler.NewHttpHandler(chatUc)
+	httpH := httpHandler.NewHttpHandler(chatUc, userUc)
 
 	hub := ws.NewHub()
 	websocketH := websocket.NewWebsocketHandler(hub, userUc, messageUc, chatUc)

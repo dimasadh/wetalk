@@ -4,6 +4,7 @@ import (
 	"context"
 	"wetalk/internal/entity"
 
+	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -30,15 +31,15 @@ func NewChatRepository(db mongo.Database) ChatRepository {
 func (r *chatRepository) Index(ctx context.Context, userId string) ([]entity.Chat, error) {
 	collection := r.db.Collection("chats")
 
-	matchStage := bson.D{{Key: "$match", Value: bson.D{{Key: "userId", Value: userId}}}}
 	lookupStage := bson.D{{Key: "$lookup", Value: bson.D{
 		{Key: "from", Value: "chat_participants"},
 		{Key: "localField", Value: "_id"},
 		{Key: "foreignField", Value: "chatId"},
 		{Key: "as", Value: "participants"},
 	}}}
+	matchStage := bson.D{{Key: "$match", Value: bson.D{{Key: "participants.userId", Value: userId}}}}
 
-	cursor, err := collection.Aggregate(ctx, mongo.Pipeline{matchStage, lookupStage})
+	cursor, err := collection.Aggregate(ctx, mongo.Pipeline{lookupStage, matchStage})
 	if err != nil {
 		return nil, err
 	}
@@ -66,6 +67,7 @@ func (r *chatRepository) Get(ctx context.Context, chatId string) (entity.Chat, e
 
 func (r *chatRepository) Create(ctx context.Context, chat entity.Chat) (string, error) {
 	collection := r.db.Collection("chats")
+	chat.Id = uuid.New().String()
 
 	_, err := collection.InsertOne(ctx, chat)
 	if err != nil {

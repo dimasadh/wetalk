@@ -15,17 +15,20 @@ type ChatUsecase interface {
 	AddParticipants(ctx context.Context, chatId string, userIds []string) error
 	GetParticipants(ctx context.Context, chatId string) ([]entity.ChatParticipant, error)
 	Delete(ctx context.Context, chatId string) error
+	GetMessages(ctx context.Context, chatId string, limit, offset int) ([]entity.Message, error)
 }
 
 type chatUsecase struct {
-	chatRepo repository.ChatRepository
-	userRepo repository.UserRepository
+	chatRepo    repository.ChatRepository
+	userRepo    repository.UserRepository
+	messageRepo repository.MessageRepository
 }
 
-func NewChatUsecase(chatRepo repository.ChatRepository, userRepo repository.UserRepository) ChatUsecase {
+func NewChatUsecase(chatRepo repository.ChatRepository, userRepo repository.UserRepository, messageRepo repository.MessageRepository) ChatUsecase {
 	return &chatUsecase{
-		chatRepo: chatRepo,
-		userRepo: userRepo,
+		chatRepo:    chatRepo,
+		userRepo:    userRepo,
+		messageRepo: messageRepo,
 	}
 }
 
@@ -105,4 +108,8 @@ func (c *chatUsecase) GetParticipants(ctx context.Context, chatId string) ([]ent
 
 func (c *chatUsecase) Delete(ctx context.Context, chatId string) error {
 	return c.chatRepo.Delete(ctx, chatId)
+}
+
+func (c *chatUsecase) GetMessages(ctx context.Context, chatId string, limit, offset int) ([]entity.Message, error) {
+	return c.messageRepo.GetByChatId(ctx, chatId, limit, offset)
 }

@@ -1,8 +1,10 @@
 package websocket
 
 type OutgoingMessage struct {
-	UserId    string `json:"chatId"`
+	MessageId string `json:"messageId"`
+	UserId    string `json:"userId"`
 	UserName  string `json:"userName"`
 	Message   string `json:"message"`
 	Timestamp int64  `json:"timestamp"`
+	IsRead    bool   `json:"isRead"`
 }

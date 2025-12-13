@@ -5,15 +5,19 @@ import (
 	"log"
 	"net/http"
 	"wetalk/internal/usecase"
+
+	"github.com/go-chi/chi/v5"
 )
 
 type HttpHandler struct {
 	chatUc usecase.ChatUsecase
+	userUc usecase.UserUsecase
 }
 
-func NewHttpHandler(chatUc usecase.ChatUsecase) *HttpHandler {
+func NewHttpHandler(chatUc usecase.ChatUsecase, userUc usecase.UserUsecase) *HttpHandler {
 	return &HttpHandler{
 		chatUc: chatUc,
+		userUc: userUc,
 	}
 }
 
@@ -56,7 +60,7 @@ func (h *HttpHandler) CreateChat(w http.ResponseWriter, r *http.Request) {
 
 // Method Get user/:id/chat/
 func (h *HttpHandler) ListChat(w http.ResponseWriter, r *http.Request) {
-	userId := r.URL.Query().Get("id")
+	userId := chi.URLParam(r, "id")
 
 	response := Response{}
 	chats, err := h.chatUc.Index(r.Context(), userId)
@@ -70,6 +74,48 @@ func (h *HttpHandler) ListChat(w http.ResponseWriter, r *http.Request) {
 
 	response.Message = "success"
 	response.Data = chats
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+// Method Get /user/:id
+func (h *HttpHandler) GetUser(w http.ResponseWriter, r *http.Request) {
+	userId := chi.URLParam(r, "id")
+
+	response := Response{}
+	user, err := h.userUc.Get(r.Context(), userId)
+	if err != nil {
+		log.Printf("Get user error: %v", err)
+		response.Message = "user not found"
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	response.Message = "success"
+	response.Data = user
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+// Method Get /chat/:chatId/messages
+func (h *HttpHandler) GetMessages(w http.ResponseWriter, r *http.Request) {
+	chatId := chi.URLParam(r, "chatId")
+	
+	response := Response{}
+	messages, err := h.chatUc.GetMessages(r.Context(), chatId, 100, 0)
+	if err != nil {
+		log.Printf("Get messages error: %v", err)
+		response.Message = "internal server error"
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	response.Message = "success"
+	response.Data = messages
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)

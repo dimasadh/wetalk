@@ -95,7 +95,15 @@ func (h *WebsocketHandler) HandleUnregisterClient(client *ws.UserClient) {
 }
 
 func (h *WebsocketHandler) handleMessage(ctx context.Context, client *ws.UserClient, data []byte) {
-	var message IncomintMessage
+	// Try to parse as read acknowledgment first
+	var readAck MessageReadAck
+	if err := json.Unmarshal(data, &readAck); err == nil && readAck.MessageId != "" {
+		h.handleReadAcknowledgment(ctx, client, readAck)
+		return
+	}
+
+	// Parse as regular message
+	var message IncomingMessage
 	err := json.Unmarshal(data, &message)
 	if err != nil {
 		log.Printf("Unknown message: %v", err)
@@ -114,6 +122,20 @@ func (h *WebsocketHandler) handleMessage(ctx context.Context, client *ws.UserCli
 		return
 	}
 
+	// Save message to database
+	messageEntity := entity.Message{
+		ChatId:    message.ChatId,
+		SenderId:  client.UserId,
+		Message:   message.Message,
+		Timestamp: message.Timestamp,
+		IsRead:    false,
+	}
+	messageId, err := h.messageUc.SaveMessage(ctx, messageEntity)
+	if err != nil {
+		log.Printf("Save message error: %v", err)
+		return
+	}
+
 	participants, err := h.chatUc.GetParticipants(ctx, chat.Id)
 	if err != nil {
 		log.Printf("GetParticipants error: %v", err)
@@ -126,12 +148,11 @@ func (h *WebsocketHandler) handleMessage(ctx context.Context, client *ws.UserCli
 		return
 	}
 
-	userIds := make([]string, len(participants))
+	userIds := make([]string, 0, len(participants))
 	for _, participant := range participants {
 		userIds = append(userIds, participant.UserId)
 	}
 
-	var offlineUsers []entity.User
 	onlineUsers, err := h.userUc.GetOnlineUser(ctx, userIds)
 	if err != nil {
 		log.Printf("GetOnlineUser error: %v", err)
@@ -156,13 +177,15 @@ func (h *WebsocketHandler) handleMessage(ctx context.Context, client *ws.UserCli
 				return
 			}
 
-			message := OutgoingMessage{
+			outgoingMsg := OutgoingMessage{
+				MessageId: messageId,
 				UserId:    client.UserId,
 				UserName:  sender.Name,
 				Message:   message.Message,
 				Timestamp: message.Timestamp,
+				IsRead:    false,
 			}
-			messageBytes, err := json.Marshal(message)
+			messageBytes, err := json.Marshal(outgoingMsg)
 			if err != nil {
 				log.Printf("Marshal message error: %v", err)
 				return
@@ -174,15 +197,14 @@ func (h *WebsocketHandler) handleMessage(ctx context.Context, client *ws.UserCli
 	}
 
 	wg.Wait()
+}
 
-	// Save message to inbox if recipient is offline
-	for _, userId := range userIds {
-		if _, exists := userMap[userId]; !exists {
-			offlineUsers = append(offlineUsers, entity.User{Id: userId})
-		}
+func (h *WebsocketHandler) handleReadAcknowledgment(ctx context.Context, client *ws.UserClient, readAck MessageReadAck) {
+	err := h.messageUc.MarkAsRead(ctx, readAck.MessageId)
+	if err != nil {
+		log.Printf("Mark message as read error: %v", err)
+		return
 	}
 
-	if len(offlineUsers) > 0 {
-		// implement later
-	}
+	log.Printf("Message %s marked as read by user %s", readAck.MessageId, client.UserId)
 }
