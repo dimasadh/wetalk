@@ -6,8 +6,14 @@ import (
     "encoding/json"
     "log"
     "sync"
+    "time"
 
     "github.com/redis/go-redis/v9"
+)
+
+const (
+    USER_HEARTBEAT_EXPIRY = 1 * time.Minute
+    USER_HEARTBEAT_TTL    = 30 * time.Second
 )
 
 type RedisHub struct {
@@ -58,6 +64,7 @@ func NewRedisHub(redisAddr string, serverID string) IHub {
 func (h *RedisHub) Run() {
     // Start Redis subscriber in separate goroutine
     go h.subscribeRedis()
+    h.startUserHeartbeat()
 
     for {
         select {
@@ -71,7 +78,7 @@ func (h *RedisHub) Run() {
                 context.Background(),
                 "user:"+client.UserId+":server",
                 h.serverID,
-                0, // No expiration (or use TTL with heartbeat)
+                USER_HEARTBEAT_EXPIRY,
             )
 
             log.Printf("[%s] %s connected", h.serverID, client.UserId)
@@ -220,4 +227,29 @@ func (h *RedisHub) UnregisterClient(client *UserClient) {
 
 func (h *RedisHub) SetOnClientUnregister(callback func(client *UserClient) error) {
     h.OnClientUnregister = callback
+}
+
+func (h *RedisHub) startUserHeartbeat() {
+	ticker := time.NewTicker(USER_HEARTBEAT_TTL)
+	ctx := context.Background()
+
+	go func() {
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+	    		pipe := h.redisClient.Pipeline()
+
+				for userID := range h.clients {
+					pipe.Expire(ctx, "user:"+userID+":server", USER_HEARTBEAT_EXPIRY)
+				}
+
+				_, _ = pipe.Exec(ctx)
+
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
 }
