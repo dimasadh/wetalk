@@ -30,6 +30,8 @@ func (u *userUsecase) Get(ctx context.Context, userId string) (entity.User, erro
 		return entity.User{}, err
 	}
 
+	// Don't expose password
+	user.Password = ""
 	return user, nil
 }
 
@@ -47,7 +49,17 @@ func (u *userUsecase) Update(ctx context.Context, user entity.User) error {
 }
 
 func (u *userUsecase) GetOnlineUser(ctx context.Context, userIds []string) ([]entity.User, error) {
-	return u.userRepo.GetOnlineUser(ctx, userIds)
+	users, err := u.userRepo.GetOnlineUser(ctx, userIds)
+	if err != nil {
+		return nil, err
+	}
+
+	// Don't expose passwords
+	for i := range users {
+		users[i].Password = ""
+	}
+	
+	return users, nil
 }
 
 func (u *userUsecase) HandleUnregisterClient(ctx context.Context, userId string) (string, error) {
