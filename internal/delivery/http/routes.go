@@ -16,7 +16,7 @@ func MapHttpRoutes(r *chi.Mux, httpHandler HttpHandler, websocketHandler wsDeliv
 		r.Post("/login", http.HandlerFunc(authHandler.Login))
 		r.Post("/refresh", http.HandlerFunc(authHandler.RefreshToken))
 		r.Post("/logout", http.HandlerFunc(authHandler.Logout))
-		
+
 		// Protected auth routes
 		r.Group(func(r chi.Router) {
 			r.Use(authMiddleware.Authenticate)
@@ -28,16 +28,32 @@ func MapHttpRoutes(r *chi.Mux, httpHandler HttpHandler, websocketHandler wsDeliv
 	r.Group(func(r chi.Router) {
 		r.Use(authMiddleware.Authenticate)
 
-		// Chat routes
-		r.Route("/chat", func(r chi.Router) {
-			r.Post("/", http.HandlerFunc(httpHandler.CreateChat))
-			r.Get("/{chatId}/messages", http.HandlerFunc(httpHandler.GetMessages))
-		})
-
 		// User routes
 		r.Route("/user", func(r chi.Router) {
 			r.Get("/{id}", http.HandlerFunc(httpHandler.GetUser))
-			r.Get("/{id}/chat", http.HandlerFunc(httpHandler.ListChat))
+			r.Get("/chats", http.HandlerFunc(httpHandler.ListUserChats))
+		})
+
+		// Chat routes
+		r.Route("/chat", func(r chi.Router) {
+			// Create chats
+			r.Post("/personal", http.HandlerFunc(httpHandler.CreatePersonalChat))
+			r.Post("/group", http.HandlerFunc(httpHandler.CreateGroupChat))
+
+			// Chat operations
+			r.Get("/{chatId}", http.HandlerFunc(httpHandler.GetChat))
+			r.Delete("/{chatId}", http.HandlerFunc(httpHandler.DeleteChat))
+			r.Get("/{chatId}/messages", http.HandlerFunc(httpHandler.GetMessages))
+
+			// Group chat operations
+			r.Post("/{chatId}/invite", http.HandlerFunc(httpHandler.InviteUsersToGroup))
+			r.Post("/{chatId}/leave", http.HandlerFunc(httpHandler.LeaveGroup))
+		})
+
+		// Invitation routes
+		r.Route("/invitations", func(r chi.Router) {
+			r.Get("/", http.HandlerFunc(httpHandler.GetPendingInvitations))
+			r.Post("/{invitationId}/respond", http.HandlerFunc(httpHandler.RespondToInvitation))
 		})
 	})
 }

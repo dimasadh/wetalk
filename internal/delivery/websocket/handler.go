@@ -110,7 +110,8 @@ func (h *WebsocketHandler) handleMessage(ctx context.Context, client *ws.UserCli
 		return
 	}
 
-	chat, err := h.chatUc.Get(ctx, message.ChatId)
+	// Get chat details - pass userId to check participation
+	chatDetail, err := h.chatUc.Get(ctx, message.ChatId, client.UserId)
 	if err != nil {
 		log.Printf("Get chat error: %v", err)
 		return
@@ -136,21 +137,22 @@ func (h *WebsocketHandler) handleMessage(ctx context.Context, client *ws.UserCli
 		return
 	}
 
-	participants, err := h.chatUc.GetParticipants(ctx, chat.Id)
+	// Get participants - now returns []entity.User
+	participants, err := h.chatUc.GetParticipants(ctx, chatDetail.Chat.Id, client.UserId)
 	if err != nil {
 		log.Printf("GetParticipants error: %v", err)
 		return
 	}
 
 	if len(participants) == 0 {
-		log.Printf("No participants in chat: %s", chat.Id)
-		h.chatUc.Delete(ctx, chat.Id)
+		log.Printf("No participants in chat: %s", chatDetail.Chat.Id)
+		h.chatUc.Delete(ctx, chatDetail.Chat.Id, client.UserId)
 		return
 	}
 
 	userIds := make([]string, 0, len(participants))
 	for _, participant := range participants {
-		userIds = append(userIds, participant.UserId)
+		userIds = append(userIds, participant.Id)
 	}
 
 	onlineUsers, err := h.userUc.GetOnlineUser(ctx, userIds)
@@ -167,7 +169,7 @@ func (h *WebsocketHandler) handleMessage(ctx context.Context, client *ws.UserCli
 	var wg sync.WaitGroup
 
 	for _, participant := range participants {
-		if participant.UserId == client.UserId {
+		if participant.Id == client.UserId {
 			continue
 		}
 		wg.Add(1)
@@ -193,7 +195,7 @@ func (h *WebsocketHandler) handleMessage(ctx context.Context, client *ws.UserCli
 
 			h.hub.SendToClient(userId, messageBytes)
 
-		}(participant.UserId)
+		}(participant.Id)
 	}
 
 	wg.Wait()
