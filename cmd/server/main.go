@@ -23,12 +23,14 @@ import (
 func Run() {
 	err := godotenv.Load()
 	if err != nil {
-		fmt.Println("Error loading .env file")
+		fmt.Println("godotenv: error loading .env file")
 	}
 
 	ctx := context.Background()
 
-	mongoDb, err := db.NewMongoStore(ctx, "mongodb://localhost:27017", "wetalk")
+	mongoDbHost := os.Getenv("MONGODB_URI")
+	mongoDbName := os.Getenv("MONGODB_DATABASE")
+	mongoDb, err := db.NewMongoStore(ctx, mongoDbHost, mongoDbName)
 	if err != nil {
 		panic(err)
 	}
