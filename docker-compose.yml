@@ -1,0 +1,43 @@
+version: "3.9"
+
+services:
+  wetalk-backend:
+    build: .
+    container_name: wetalk-backend
+    expose:
+      - "8080"
+    env_file:
+      - .env
+    depends_on:
+      - mongodb
+      # - redis
+    restart: unless-stopped
+    networks:
+      - wetalk-net
+
+  mongodb:
+    image: mongo:4.4
+    container_name: wetalk-mongodb
+    expose:
+      - "27017"
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+    networks:
+      - wetalk-net
+
+  # redis:
+  #   image: redis:6.2
+  #   container_name: wetalk-redis
+  #   expose:
+  #     - "6379"
+  #   restart: unless-stopped
+  #   networks:
+  #     - wetalk-net
+
+volumes:
+  mongo_data:
+
+networks:
+  wetalk-net:
+    external: true
