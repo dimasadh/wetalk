@@ -7,4 +7,5 @@ type OutgoingMessage struct {
 	Message   string `json:"message"`
 	Timestamp int64  `json:"timestamp"`
 	IsRead    bool   `json:"isRead"`
+	ChatId    string `json:"chatId"`
 }

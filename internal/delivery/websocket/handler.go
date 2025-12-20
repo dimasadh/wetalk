@@ -180,6 +180,7 @@ func (h *WebsocketHandler) handleMessage(ctx context.Context, client *ws.UserCli
 			}
 
 			outgoingMsg := OutgoingMessage{
+				ChatId:    message.ChatId,
 				MessageId: messageId,
 				UserId:    client.UserId,
 				UserName:  sender.Name,

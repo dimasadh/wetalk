@@ -57,7 +57,7 @@ func Run() {
 	messageUc := usecase.NewMessageUseCase(messageRepo, chatRepo, userRepo)
 	chatUc := usecase.NewChatUsecase(chatRepo, userRepo, messageRepo)
 
- 	// Check if Redis is enabled
+	// Check if Redis is enabled
 	redisAddr := os.Getenv("REDIS_ADDR")
 	useRedis := redisAddr != ""
 
@@ -96,7 +96,7 @@ func Run() {
 	router.Use(middleware.Logger)
 	router.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Access-Control-Allow-Origin", "null")
+			w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 			w.Header().Set("Access-Control-Allow-Credentials", "true")
