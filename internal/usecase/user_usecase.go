@@ -7,6 +7,7 @@ import (
 )
 
 type UserUsecase interface {
+	Index(ctx context.Context) ([]entity.User, error)
 	Get(ctx context.Context, userId string) (entity.User, error)
 	Create(ctx context.Context, name string) (string, error)
 	Update(ctx context.Context, user entity.User) error
@@ -22,6 +23,20 @@ func NewUserUseCase(userRepo repository.UserRepository) UserUsecase {
 	return &userUsecase{
 		userRepo: userRepo,
 	}
+}
+
+func (u *userUsecase) Index(ctx context.Context) ([]entity.User, error) {
+	users, err := u.userRepo.Index(ctx, entity.UserIndexFilter{})
+	if err != nil {
+		return nil, err
+	}
+
+	// Don't expose passwords
+	for i := range users {
+		users[i].Password = ""
+	}
+
+	return users, nil
 }
 
 func (u *userUsecase) Get(ctx context.Context, userId string) (entity.User, error) {
@@ -58,7 +73,7 @@ func (u *userUsecase) GetOnlineUser(ctx context.Context, userIds []string) ([]en
 	for i := range users {
 		users[i].Password = ""
 	}
-	
+
 	return users, nil
 }
 

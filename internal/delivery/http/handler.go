@@ -27,6 +27,27 @@ type Response struct {
 	Data    any    `json:"data"`
 }
 
+// GET /user - Get list of users
+func (h *HttpHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
+	users, err := h.userUc.Index(r.Context())
+	if err != nil {
+		log.Printf("List users error: %v", err)
+		response := Response{Message: "internal server error"}
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	response := Response{
+		Message: "success",
+		Data:    users,
+	}
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
 // GET /user/chats - Get list of chats for authenticated user
 func (h *HttpHandler) ListUserChats(w http.ResponseWriter, r *http.Request) {
 	// Get user from context
@@ -199,12 +220,12 @@ func (h *HttpHandler) GetChat(w http.ResponseWriter, r *http.Request) {
 		message := "internal server error"
 
 		switch err {
-			case usecase.ErrNotParticipant:
-				statusCode = http.StatusForbidden
-				message = "you are not a participant of this chat"
-			case usecase.ErrChatNotFound:
-				statusCode = http.StatusNotFound
-				message = "chat not found"
+		case usecase.ErrNotParticipant:
+			statusCode = http.StatusForbidden
+			message = "you are not a participant of this chat"
+		case usecase.ErrChatNotFound:
+			statusCode = http.StatusNotFound
+			message = "chat not found"
 		}
 
 		response := Response{Message: message}

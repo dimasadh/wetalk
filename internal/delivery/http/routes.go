@@ -30,6 +30,7 @@ func MapHttpRoutes(r *chi.Mux, httpHandler HttpHandler, websocketHandler wsDeliv
 
 		// User routes
 		r.Route("/user", func(r chi.Router) {
+			r.Get("/", http.HandlerFunc(httpHandler.ListUsers))
 			r.Get("/{id}", http.HandlerFunc(httpHandler.GetUser))
 			r.Get("/chats", http.HandlerFunc(httpHandler.ListUserChats))
 		})
